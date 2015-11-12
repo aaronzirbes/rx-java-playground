@@ -39,8 +39,8 @@ class ObservableQueue<T> {
         return this
     }
 
-    ObservableQueue throttled(TimeUnit timeUnit, long time) {
-        observable = observable.throttleLast(time, timeUnit)
+    ObservableQueue throttleLast(TimeUnit timeUnit, long time, Scheduler scheduler) {
+        observable = observable.throttleLast(time, timeUnit, scheduler)
         return this
     }
 
@@ -50,7 +50,6 @@ class ObservableQueue<T> {
     }
 
     void unsubscribe() {
-        log.info "Unsubscribing from queue."
         subscriber?.unsubscribe()
     }
 
@@ -60,6 +59,9 @@ class ObservableQueue<T> {
     }
 
     void add(T thing) {
+        if (subscriber?.unsubscribed) {
+            throw new IllegalStateException('You cannot add to an ObservableQueue that has been unsubscribed')
+        }
         queue.add(thing)
     }
 
@@ -70,8 +72,9 @@ class ObservableQueue<T> {
                 T thing = queue.poll(pollTimeout, TimeUnit.SECONDS)
                 if (thing != null) { subscriber.onNext(thing) }
             }
-            log.info "Exiting observable loop and clearing queue."
+            log.info "XXXXXXXX Exiting observable loop and clearing queue."
             queue.clear()
+            queue = null
         } as Observable.OnSubscribe<T>)
     }
 

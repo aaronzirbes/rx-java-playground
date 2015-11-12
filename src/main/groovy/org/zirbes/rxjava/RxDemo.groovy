@@ -7,12 +7,18 @@ import groovy.util.logging.Slf4j
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentSkipListMap
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 import org.joda.time.LocalDateTime
 
 import rx.Scheduler
 import rx.schedulers.Schedulers
+
+import rx.schedulers.CachedThreadScheduler
+import rx.schedulers.ImmediateScheduler
+import rx.internal.schedulers.EventLoopsScheduler
+import rx.schedulers.NewThreadScheduler
 
 @CompileStatic
 @Slf4j
@@ -31,12 +37,21 @@ class RxDemo {
     final NavigableMap<LocalDateTime, String> initialKeyTime = new ConcurrentSkipListMap<LocalDateTime, String>()
     final Map<String, ObservableQueue> pushQueues = new ConcurrentHashMap<String, ObservableQueue>()
 
+    protected final Scheduler io = Schedulers.io()
+    // protected final Scheduler immediate = Schedulers.immediate()
+    // protected final Scheduler computation = Schedulers.computation()
+    // protected final Scheduler newThread = Schedulers.newThread()
+     protected final Scheduler simple = Schedulers.from(Executors.newCachedThreadPool())
+
+    RxDemo() { }
+
     void run() {
+
         int counter = 0
         while (true) {
             counter++
             Bird bird = new Bird(counter)
-            log.info "Queueing bird ${bird}"
+            log.info "                     ++++++++ Queueing bird ${bird.name}"
             queueBird(bird)
             Thread.sleep(200)
         }
@@ -68,7 +83,7 @@ class RxDemo {
         expiredKeys.each{ pushQueues.remove(it) }
         // Remove them from the time map
         expiredTimes.each{ initialKeyTime.remove(it) }
-        log.info "initialKeyTime size: ${initialKeyTime.size()}, pushQueues size: ${pushQueues.size()}"
+        //log.info "initialKeyTime size: ${initialKeyTime.size()}, pushQueues size: ${pushQueues.size()}"
     }
 
     /** Get an existing observable queue, or create a new one */
@@ -85,9 +100,9 @@ class RxDemo {
     /** Get an observable queue and subscribe to it's throttled puts to publish to the event ledger */
     protected ObservableQueue getWorkerQueue() {
 
-        ObservableQueue queue = new ObservableQueue<Bird>().observeOn(Schedulers.computation())
-                                                           .throttled(throttleUnit, throttleTime)
-                                                           .subscribeOn(Schedulers.io())
+        ObservableQueue queue = new ObservableQueue<Bird>().observeOn(simple)
+                                                           .subscribeOn(simple)
+                                                           .throttleLast(throttleUnit, throttleTime, simple)
         return pushUpdatesFromQueue(queue)
     }
 
@@ -102,8 +117,9 @@ class RxDemo {
         return queue
     }
 
+    // Computational Thread Pool (computation)
     protected void sendBird(Bird bird) {
-        log.info "Sending ${bird}"
+        log.info "         >>>>>>>> Sending ${bird}"
     }
 
 }
