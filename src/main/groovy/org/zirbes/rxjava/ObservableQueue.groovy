@@ -25,10 +25,6 @@ class ObservableQueue<T> {
         this.observable = getObservableForQueue()
     }
 
-    ObservableQueue onScheduler(Scheduler scheduler) {
-        return observeOn(scheduler).subscribeOn(scheduler)
-    }
-
     ObservableQueue observeOn(Scheduler scheduler) {
         observable = observable.observeOn(scheduler)
         return this

@@ -29,37 +29,34 @@ class RxDemo {
     ObservableQueue queue = new ObservableQueue<Bird>()
 
     protected TimeUnit throttleUnit = TimeUnit.SECONDS
-    protected int throttleTime = 10
+    protected int throttleTime = 20
 
     protected TimeUnit queueFlushUnit = TimeUnit.SECONDS
-    protected int queueFlushTime = 15
+    protected int queueFlushTime = 22
 
     final NavigableMap<LocalDateTime, String> initialKeyTime = new ConcurrentSkipListMap<LocalDateTime, String>()
     final Map<String, ObservableQueue> pushQueues = new ConcurrentHashMap<String, ObservableQueue>()
 
-    protected final Scheduler io = Schedulers.io()
-    // protected final Scheduler immediate = Schedulers.immediate()
-    // protected final Scheduler computation = Schedulers.computation()
-    // protected final Scheduler newThread = Schedulers.newThread()
-     protected final Scheduler simple = Schedulers.from(Executors.newCachedThreadPool())
+    protected final Scheduler observe = Schedulers.from(ObservableExecutor.create('observe'))
+    protected final Scheduler subscribe = Schedulers.from(ObservableExecutor.create('subscribe'))
+    protected final Scheduler throttle = Schedulers.from(ObservableExecutor.create('throttle'))
 
     RxDemo() { }
 
     void run() {
-
         int counter = 0
         while (true) {
             counter++
             Bird bird = new Bird(counter)
             log.info "                     ++++++++ Queueing bird ${bird.name}"
             queueBird(bird)
-            Thread.sleep(200)
+            Thread.sleep(50)
         }
     }
 
     /** Queue the bird update for publishing to the event ledger */
     void queueBird(Bird bird) {
-        String key = bird.type
+        String key = bird.name
         getQueue(key).add(bird)
         cleanUpQueues(key)
     }
@@ -100,9 +97,9 @@ class RxDemo {
     /** Get an observable queue and subscribe to it's throttled puts to publish to the event ledger */
     protected ObservableQueue getWorkerQueue() {
 
-        ObservableQueue queue = new ObservableQueue<Bird>().observeOn(simple)
-                                                           .subscribeOn(simple)
-                                                           .throttleLast(throttleUnit, throttleTime, simple)
+        ObservableQueue queue = new ObservableQueue<Bird>().observeOn(observe)
+                                                           .subscribeOn(subscribe)
+                                                           .throttleLast(throttleUnit, throttleTime, throttle)
         return pushUpdatesFromQueue(queue)
     }
 

@@ -13,9 +13,12 @@ class Bird {
     }
 
     Bird(int index) {
+        this.number = index
         this.type = BirdType.type(index)
         this.name = BirdType.name(index)
     }
+
+    int number
 
     String type
 
@@ -24,7 +27,7 @@ class Bird {
     LocalDateTime time = LocalDateTime.now()
 
     String toString() {
-        return "${type} named ${name} @ ${time}"
+        return "${type} #${number} named ${name} @ ${time}"
     }
 
 }
